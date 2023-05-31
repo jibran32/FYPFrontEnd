@@ -1,0 +1,5 @@
+matplotlib==3.6.2
+pandas==1.5.2
+streamlit==1.21.0
+tensorflow==2.12.0
+tensorflow_intel==2.12.0
