@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import plotly.graph_objects as go
 
 # Page title
 st.title("CSV File Explorer")
@@ -63,7 +65,7 @@ if file is not None:
             # Replace the placeholder code below with your actual classification logic
             predicted_label = model.predict(tweet_sequence)
 
-            if predicted_label > 0.5:
+            if predicted_label[0][0] * 100 > 50:
                 depressed_count += 1
                 depressed_tweets.append(tweet)
             else:
@@ -76,12 +78,44 @@ if file is not None:
 
         # Create a pie chart
         labels = ['Depressed', 'Non-Depressed']
-        sizes = [depressed_count, non_depressed_count]
+        sizes = [depressed_percentage, non_depressed_percentage]
         explode = (0.1, 0)  # Explode the depressed slice
         colors = ['#ff9999', '#66b3ff']
-        plt.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-        plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-        plt.title('Tweets Classification')
+        fig_pie = go.Figure(data=[go.Pie(labels=labels, values=sizes, textinfo='label+percent', hole=.3, marker=dict(colors=colors))])
+        fig_pie.update_layout(title='Tweets Classification')
+        st.plotly_chart(fig_pie)
+
+        # Create a gauge chart
+        fig_gauge = go.Figure(go.Indicator(
+            domain={'x': [0, 1], 'y': [0, 1]},
+            value=depressed_percentage,
+            mode="gauge+number",
+            gauge={'axis': {'range': [0, 100]},
+                   'steps': [{'range': [0, 50], 'color': "green"},
+                             {'range': [50, 100], 'color': "red"}],
+                   'threshold': {'line': {'color': "black", 'width': 4}, 'thickness': 0.75, 'value': depressed_percentage}}
+        ))
+        fig_gauge.update_layout(title='Depressed vs Non-Depressed Tweets')
+        st.plotly_chart(fig_gauge)
+
+        # Display word cloud for depressed tweets
+        st.write("Depressed Tweets Word Cloud:")
+        depressed_text = ' '.join(depressed_tweets)
+        wordcloud = WordCloud(width=800, height=400).generate(depressed_text)
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title('Depressed Tweets Word Cloud')
+        st.pyplot(plt)
+
+        # Display word cloud for non-depressed tweets
+        st.write("Non-Depressed Tweets Word Cloud:")
+        non_depressed_text = ' '.join(non_depressed_tweets)
+        wordcloud = WordCloud(width=800, height=400).generate(non_depressed_text)
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title('Non-Depressed Tweets Word Cloud')
         st.pyplot(plt)
 
         # Display tables for depressed and non-depressed tweets
